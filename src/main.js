@@ -24,6 +24,8 @@ import { renderGrowth } from './pages/growth';
 
 // Import Auth Service
 import { authService } from './services/auth';
+import { dbService } from './services/db';
+import { isSupabaseConfigured, supabase } from './lib/supabase';
 
 // ----------------------------------------------------
 // Global Application State (in-memory)
@@ -37,6 +39,46 @@ const state = {
   network: [...initialNetwork],
   activities: [...initialActivities]
 };
+
+// Sync live database data into local state
+async function syncDatabaseData() {
+  const currentUserId = state.currentUser ? state.currentUser.id : null;
+  
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const dbDiscussions = await dbService.fetchDiscussions(currentUserId);
+      if (dbDiscussions) {
+        state.discussions = dbDiscussions;
+      }
+      
+      const dbNetwork = await dbService.fetchNetworkProfiles();
+      if (dbNetwork) {
+        // Merge database network with mock network, ensuring no duplicates
+        const mergedNetwork = [...dbNetwork];
+        initialNetwork.forEach(mockMem => {
+          if (!mergedNetwork.some(m => m.id === mockMem.id || m.name === mockMem.name)) {
+            mergedNetwork.push(mockMem);
+          }
+        });
+        state.network = mergedNetwork;
+      }
+      
+      const dbActivities = await dbService.fetchActivities();
+      if (dbActivities) {
+        // Merge database activities with mock activities
+        const mergedActivities = [...dbActivities];
+        initialActivities.forEach(mockAct => {
+          if (!mergedActivities.some(a => a.id === mockAct.id)) {
+            mergedActivities.push(mockAct);
+          }
+        });
+        state.activities = mergedActivities;
+      }
+    } catch (e) {
+      console.warn('Failed to sync live data from Supabase, operating offline:', e);
+    }
+  }
+}
 
 // ----------------------------------------------------
 // Toast Notification Engine
@@ -229,7 +271,21 @@ const actions = {
   },
 
   // Discussion actions
-  addDiscussion: (title, content, category) => {
+  addDiscussion: async (title, content, category) => {
+    const isRealUser = state.currentUser && state.currentUser.id !== 'u-0';
+    if (isRealUser && isSupabaseConfigured && supabase) {
+      try {
+        await dbService.addDiscussion(title, content, category, state.currentUser.id);
+        await dbService.logActivity('started a discussion thread', title, '#/discussions', state.currentUser.id);
+        await syncDatabaseData();
+        showToast('Discussion created successfully!');
+        router();
+        return;
+      } catch (err) {
+        console.warn('DB write failed, using local state:', err);
+      }
+    }
+
     const newDisc = {
       id: `disc-${state.discussions.length + 1}`,
       title,
@@ -256,9 +312,26 @@ const actions = {
       timestamp: new Date().toISOString(),
       link: `#/discussions?id=${newDisc.id}`
     });
+    router();
   },
 
-  addReply: (discId, content) => {
+  addReply: async (discId, content) => {
+    const isRealUser = state.currentUser && state.currentUser.id !== 'u-0';
+    if (isRealUser && isSupabaseConfigured && supabase) {
+      try {
+        await dbService.addReply(discId, content, state.currentUser.id);
+        const disc = state.discussions.find(d => d.id === discId);
+        const title = disc ? disc.title : 'discussion';
+        await dbService.logActivity('replied to discussion', title, `#/discussions?id=${discId}`, state.currentUser.id);
+        await syncDatabaseData();
+        showToast('Reply posted successfully!');
+        router();
+        return;
+      } catch (err) {
+        console.warn('DB write failed, using local state:', err);
+      }
+    }
+
     const disc = state.discussions.find(d => d.id === discId);
     if (!disc) return;
 
@@ -282,11 +355,27 @@ const actions = {
       timestamp: new Date().toISOString(),
       link: `#/discussions?id=${discId}`
     });
+    router();
   },
 
-  toggleLike: (discId) => {
+  toggleLike: async (discId) => {
     const disc = state.discussions.find(d => d.id === discId);
     if (!disc) return;
+
+    const isRealUser = state.currentUser && state.currentUser.id !== 'u-0';
+    if (isRealUser && isSupabaseConfigured && supabase) {
+      try {
+        await dbService.toggleLike(discId, state.currentUser.id, disc.hasLiked);
+        if (!disc.hasLiked) {
+          await dbService.logActivity('liked the discussion thread', disc.title, `#/discussions?id=${discId}`, state.currentUser.id);
+        }
+        await syncDatabaseData();
+        router();
+        return;
+      } catch (err) {
+        console.warn('DB write failed, using local state:', err);
+      }
+    }
 
     if (disc.hasLiked) {
       disc.likes = Math.max(0, disc.likes - 1);
@@ -305,11 +394,24 @@ const actions = {
         link: `#/discussions?id=${discId}`
       });
     }
+    router();
   },
 
-  logResourceInteraction: (resId) => {
+  logResourceInteraction: async (resId) => {
     const res = state.resources.find(r => r.id === resId);
     if (!res) return;
+
+    const isRealUser = state.currentUser && state.currentUser.id !== 'u-0';
+    if (isRealUser && isSupabaseConfigured && supabase) {
+      try {
+        await dbService.logActivity('explored training resource', res.title, '#/resources', state.currentUser.id);
+        await syncDatabaseData();
+        router();
+        return;
+      } catch (err) {
+        console.warn('DB write failed, using local state:', err);
+      }
+    }
 
     // Avoid logging duplicates sequentially
     const alreadyLogged = state.activities[0] &&
@@ -326,10 +428,23 @@ const actions = {
         timestamp: new Date().toISOString(),
         link: '#/resources'
       });
+      router();
     }
   },
 
-  logGrowthExploration: () => {
+  logGrowthExploration: async () => {
+    const isRealUser = state.currentUser && state.currentUser.id !== 'u-0';
+    if (isRealUser && isSupabaseConfigured && supabase) {
+      try {
+        await dbService.logActivity('explored the Growth & Impact opportunities', 'Growth & Impact Hub', '#/growth', state.currentUser.id);
+        await syncDatabaseData();
+        router();
+        return;
+      } catch (err) {
+        console.warn('DB write failed, using local state:', err);
+      }
+    }
+
     const alreadyLogged = state.activities[0] &&
                           state.activities[0].user === state.currentUser.name &&
                           state.activities[0].action === 'explored the Growth & Impact opportunities';
@@ -343,11 +458,33 @@ const actions = {
         timestamp: new Date().toISOString(),
         link: '#/growth'
       });
+      router();
     }
   },
 
   // Mentorship Actions
-  requestMentorship: (mentorId) => {
+  requestMentorship: async (mentorId) => {
+    const isRealUser = state.currentUser && state.currentUser.id !== 'u-0';
+    if (isRealUser && isSupabaseConfigured && supabase) {
+      try {
+        await dbService.requestMentorship(mentorId, state.currentUser.id);
+        const mentor = state.mentors.find(m => m.id === mentorId);
+        const name = mentor ? mentor.name : 'a mentor';
+        await dbService.logActivity('requested mentorship match with', name, '#/mentorship', state.currentUser.id);
+        
+        // Refresh local session profile to populate requestedMentorships
+        const updatedProfile = await authService.fetchSupabaseProfile({ id: state.currentUser.id, email: state.currentUser.email });
+        state.currentUser = updatedProfile;
+        
+        await syncDatabaseData();
+        showToast('Mentorship request sent successfully!');
+        router();
+        return;
+      } catch (err) {
+        console.warn('DB write failed, using local state:', err);
+      }
+    }
+
     if (!state.currentUser.requestedMentorships.includes(mentorId)) {
       state.currentUser.requestedMentorships.push(mentorId);
       
@@ -361,11 +498,33 @@ const actions = {
         timestamp: new Date().toISOString(),
         link: '#/mentorship'
       });
+      router();
     }
   },
 
   // Events Actions
-  registerEvent: (eventId) => {
+  registerEvent: async (eventId) => {
+    const isRealUser = state.currentUser && state.currentUser.id !== 'u-0';
+    if (isRealUser && isSupabaseConfigured && supabase) {
+      try {
+        await dbService.registerEvent(eventId, state.currentUser.id);
+        const event = state.events.find(e => e.id === eventId);
+        const title = event ? event.title : 'an event';
+        await dbService.logActivity('registered to attend', title, '#/events', state.currentUser.id);
+        
+        // Refresh local session profile to populate registeredEvents
+        const updatedProfile = await authService.fetchSupabaseProfile({ id: state.currentUser.id, email: state.currentUser.email });
+        state.currentUser = updatedProfile;
+        
+        await syncDatabaseData();
+        showToast('Registered for event successfully!');
+        router();
+        return;
+      } catch (err) {
+        console.warn('DB write failed, using local state:', err);
+      }
+    }
+
     if (!state.currentUser.registeredEvents.includes(eventId)) {
       state.currentUser.registeredEvents.push(eventId);
       
@@ -383,11 +542,34 @@ const actions = {
           link: '#/events'
         });
       }
+      router();
     }
   },
 
   // Connection Actions
-  toggleConnection: (memberId, connectFlag) => {
+  toggleConnection: async (memberId, connectFlag) => {
+    const isRealUser = state.currentUser && state.currentUser.id !== 'u-0';
+    if (isRealUser && isSupabaseConfigured && supabase) {
+      try {
+        await dbService.toggleConnection(memberId, state.currentUser.id, connectFlag);
+        const member = state.network.find(m => m.id === memberId);
+        const name = member ? member.name : 'a member';
+        if (connectFlag) {
+          await dbService.logActivity('connected with network member', name, '#/network', state.currentUser.id);
+        }
+        
+        // Refresh local session profile to populate connections
+        const updatedProfile = await authService.fetchSupabaseProfile({ id: state.currentUser.id, email: state.currentUser.email });
+        state.currentUser = updatedProfile;
+        
+        await syncDatabaseData();
+        router();
+        return;
+      } catch (err) {
+        console.warn('DB write failed, using local state:', err);
+      }
+    }
+
     if (connectFlag) {
       if (!state.currentUser.connections.includes(memberId)) {
         state.currentUser.connections.push(memberId);
@@ -406,6 +588,7 @@ const actions = {
     } else {
       state.currentUser.connections = state.currentUser.connections.filter(id => id !== memberId);
     }
+    router();
   }
 };
 
@@ -575,10 +758,12 @@ function setupEventListeners() {
 // Application Bootstrapping
 // ----------------------------------------------------
 async function bootstrap() {
-  await authService.initSession(state, (profile) => {
+  await authService.initSession(state, async (profile) => {
+    await syncDatabaseData();
     renderShell();
     router();
   });
+  await syncDatabaseData();
   renderShell();
   setupEventListeners();
   router(); // Boot router instantly

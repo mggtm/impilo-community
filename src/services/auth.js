@@ -96,6 +96,17 @@ export const authService = {
         .single();
 
       if (data && !error) {
+        // Query relationship tables
+        const [connRes, eventRes, mentorRes] = await Promise.all([
+          supabase.from('network_connections').select('connected_id').eq('user_id', sbUser.id),
+          supabase.from('event_registrations').select('event_id').eq('user_id', sbUser.id),
+          supabase.from('mentorship_requests').select('mentor_id').eq('requestor_id', sbUser.id)
+        ]);
+
+        const connections = connRes.data ? connRes.data.map(r => r.connected_id) : [];
+        const registeredEvents = eventRes.data ? eventRes.data.map(r => r.event_id) : [];
+        const requestedMentorships = mentorRes.data ? mentorRes.data.map(r => r.mentor_id) : [];
+
         return {
           id: data.id,
           name: data.full_name || sbUser.email.split('@')[0],
@@ -104,9 +115,11 @@ export const authService = {
           location: data.location || 'Bulawayo, Zimbabwe',
           email: sbUser.email,
           bio: data.bio || 'Passionate community member.',
-          connections: data.connections || [],
-          registeredEvents: data.registered_events || [],
-          requestedMentorships: data.requested_mentorships || []
+          connections,
+          registeredEvents,
+          requestedMentorships,
+          interests: data.interests || [],
+          skills: data.skills || []
         };
       } else {
         // Create initial profile record in Supabase
@@ -117,7 +130,8 @@ export const authService = {
           role: newProfile.role,
           avatar_url: newProfile.avatar,
           location: newProfile.location,
-          bio: newProfile.bio
+          bio: newProfile.bio,
+          email: sbUser.email
         });
         return newProfile;
       }
@@ -221,7 +235,7 @@ export const authService = {
       id: 'u-0',
       name: 'Mako Gufe',
       role: 'Community Member',
-      avatar: '/mako_avatar.jpg',
+      avatar: './mako_avatar.jpg',
       location: 'Bulawayo, Zimbabwe',
       email: 'mako.gufe@example.com',
       bio: 'Passionate about leveraging technology and entrepreneurship to create sustainable social impact in local communities.',

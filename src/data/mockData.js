@@ -4,7 +4,7 @@ export const currentUser = {
   id: 'u-0',
   name: 'Mako Gufe',
   role: 'Community Member',
-  avatar: '/mako_avatar.jpg',
+  avatar: './mako_avatar.jpg',
   location: 'Bulawayo, Zimbabwe',
   email: 'mako.gufe@example.com',
   bio: 'Passionate about leveraging technology and entrepreneurship to create sustainable social impact in local communities.',
@@ -75,7 +75,7 @@ export const initialDiscussions = [
         id: 'rep-2-1',
         author: {
           name: 'Mako Gufe',
-          avatar: '/mako_avatar.jpg',
+          avatar: './mako_avatar.jpg',
           role: 'Community Member'
         },
         content: 'Count me in! I really need to learn Python for a data analysis project I am starting next semester.',
