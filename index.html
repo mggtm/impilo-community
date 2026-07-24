@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Impilo Community</title>
+    <!-- Lucide Icons Stylesheet via CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@0.321.0/font/lucide.min.css">
+    <script type="module" crossorigin src="./assets/index-CyTFvfmB.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-C3AkwssF.css">
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Sidebar Navigation -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-logo">
+          <div class="logo-icon">I</div>
+          <div class="logo-branding">
+            <div class="logo-title">
+              <span class="logo-impilo">IMPILO</span>
+              <span class="logo-community">COMMUNITY</span>
+            </div>
+            <div class="logo-tagline">Connect. Learn. Grow. Impact.</div>
+          </div>
+        </div>
+        <ul class="sidebar-menu">
+          <li class="menu-item active" data-page="dashboard">
+            <a href="#/dashboard">
+              <i class="lucide-layout-dashboard"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li class="menu-item" data-page="discussions">
+            <a href="#/discussions">
+              <i class="lucide-message-square"></i>
+              <span>Discussions</span>
+            </a>
+          </li>
+          <li class="menu-item" data-page="mentorship">
+            <a href="#/mentorship">
+              <i class="lucide-graduation-cap"></i>
+              <span>Mentorship</span>
+            </a>
+          </li>
+          <li class="menu-item" data-page="resources">
+            <a href="#/resources">
+              <i class="lucide-book-open"></i>
+              <span>Resources</span>
+            </a>
+          </li>
+          <li class="menu-item" data-page="events">
+            <a href="#/events">
+              <i class="lucide-calendar"></i>
+              <span>Events</span>
+            </a>
+          </li>
+          <li class="menu-item" data-page="network">
+            <a href="#/network">
+              <i class="lucide-users"></i>
+              <span>Network</span>
+            </a>
+          </li>
+        </ul>
+        <!-- Profile Area at Bottom -->
+        <div class="sidebar-profile" id="sidebar-profile">
+          <!-- Populated by main.js -->
+        </div>
+      </aside>
+
+      <!-- Main Application Panel -->
+      <div class="main-panel">
+        <!-- Top Header Navigation Bar -->
+        <header class="header">
+          <button class="menu-toggle" id="menu-toggle" aria-label="Toggle Menu">
+            <i class="lucide-menu"></i>
+          </button>
+          <div class="page-title-area">
+            <h1 id="page-title">Dashboard</h1>
+          </div>
+          <div class="header-actions">
+            <div class="search-bar-global">
+              <i class="lucide-search"></i>
+              <input type="text" id="global-search-input" placeholder="Search community...">
+            </div>
+            <button class="secondary-btn" id="header-auth-btn" style="font-size: 12px; padding: 6px 12px; height: 36px; cursor: pointer; border-color: rgba(255, 191, 0, 0.4); color: var(--color-primary);">
+              <i class="lucide-user"></i> <span id="header-auth-text">Account</span>
+            </button>
+            <div class="notification-bell" id="notification-bell">
+              <i class="lucide-bell"></i>
+              <span class="bell-badge"></span>
+            </div>
+          </div>
+        </header>
+
+        <!-- Main Content Area where views render -->
+        <main class="content-view" id="content-view">
+          <!-- Views injected dynamically -->
+        </main>
+      </div>
+    </div>
+
+    <!-- Notification Toast Messages -->
+    <div class="toast-msg" id="toast-msg">
+      <i class="lucide-check-circle"></i>
+      <span id="toast-text">Action successful!</span>
+    </div>
+
+    <!-- Central Modals Overlay -->
+    <div class="modal-overlay" id="modal-overlay">
+      <div class="modal-content" id="modal-content">
+        <!-- Forms dynamically mounted here -->
+      </div>
+    </div>
+
+    <!-- Import Main Entry Module Script -->
+  </body>
+</html>
